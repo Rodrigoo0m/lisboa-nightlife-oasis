@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/table';
 import { 
   Search, 
-  Filter, 
   CheckCircle, 
   XCircle, 
   Eye,
@@ -22,62 +21,14 @@ import {
   Clock,
   Users
 } from 'lucide-react';
+import { useReservations } from '@/contexts/ReservationContext';
+import { useToast } from '@/hooks/use-toast';
 
 const AdminReservas = () => {
+  const { toast } = useToast();
+  const { reservations, updateReservationStatus } = useReservations();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-
-  // Mock data - in real app, this would come from API
-  const reservas = [
-    {
-      id: 1,
-      nome: 'João Silva',
-      email: 'joao@email.com',
-      telefone: '+351 912 345 678',
-      data: '2024-01-20',
-      hora: '22:00',
-      pessoas: 4,
-      mesa: 'VIP 1',
-      status: 'confirmada',
-      observacoes: 'Aniversário'
-    },
-    {
-      id: 2,
-      nome: 'Maria Santos',
-      email: 'maria@email.com',
-      telefone: '+351 923 456 789',
-      data: '2024-01-20',
-      hora: '23:30',
-      pessoas: 2,
-      mesa: 'Standard 5',
-      status: 'pendente',
-      observacoes: ''
-    },
-    {
-      id: 3,
-      nome: 'Pedro Costa',
-      email: 'pedro@email.com',
-      telefone: '+351 934 567 890',
-      data: '2024-01-21',
-      hora: '21:45',
-      pessoas: 6,
-      mesa: 'VIP 2',
-      status: 'confirmada',
-      observacoes: 'Evento corporativo'
-    },
-    {
-      id: 4,
-      nome: 'Ana Ferreira',
-      email: 'ana@email.com',
-      telefone: '+351 945 678 901',
-      data: '2024-01-21',
-      hora: '00:15',
-      pessoas: 3,
-      mesa: 'Bar 2',
-      status: 'cancelada',
-      observacoes: ''
-    },
-  ];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -92,17 +43,35 @@ const AdminReservas = () => {
     }
   };
 
-  const handleStatusChange = (id: number, newStatus: string) => {
-    console.log(`Changing reservation ${id} status to ${newStatus}`);
-    // In real app, this would call an API
+  const handleStatusChange = (id: string, newStatus: 'confirmada' | 'cancelada') => {
+    updateReservationStatus(id, newStatus);
+    
+    const statusText = newStatus === 'confirmada' ? 'confirmada' : 'cancelada';
+    toast({
+      title: "Status Atualizado",
+      description: `Reserva ${statusText} com sucesso.`,
+    });
   };
 
-  const filteredReservas = reservas.filter(reserva => {
+  const getTableTypeName = (tipoMesa: string) => {
+    switch (tipoMesa) {
+      case 'standard': return 'Standard';
+      case 'vip': return 'VIP';
+      case 'private': return 'Privada';
+      default: return tipoMesa;
+    }
+  };
+
+  const filteredReservas = reservations.filter(reserva => {
     const matchesSearch = reserva.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          reserva.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || reserva.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  const totalPessoas = reservations
+    .filter(r => r.status === 'confirmada')
+    .reduce((sum, r) => sum + r.pessoas, 0);
 
   return (
     <div className="space-y-6">
@@ -122,7 +91,7 @@ const AdminReservas = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Total</p>
-                <p className="text-2xl font-bold text-white">{reservas.length}</p>
+                <p className="text-2xl font-bold text-white">{reservations.length}</p>
               </div>
               <Calendar className="h-8 w-8 text-gold" />
             </div>
@@ -135,7 +104,7 @@ const AdminReservas = () => {
               <div>
                 <p className="text-sm text-gray-400">Confirmadas</p>
                 <p className="text-2xl font-bold text-green-400">
-                  {reservas.filter(r => r.status === 'confirmada').length}
+                  {reservations.filter(r => r.status === 'confirmada').length}
                 </p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-400" />
@@ -149,7 +118,7 @@ const AdminReservas = () => {
               <div>
                 <p className="text-sm text-gray-400">Pendentes</p>
                 <p className="text-2xl font-bold text-yellow-400">
-                  {reservas.filter(r => r.status === 'pendente').length}
+                  {reservations.filter(r => r.status === 'pendente').length}
                 </p>
               </div>
               <Clock className="h-8 w-8 text-yellow-400" />
@@ -162,9 +131,7 @@ const AdminReservas = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400">Total Pessoas</p>
-                <p className="text-2xl font-bold text-white">
-                  {reservas.reduce((sum, r) => sum + r.pessoas, 0)}
-                </p>
+                <p className="text-2xl font-bold text-white">{totalPessoas}</p>
               </div>
               <Users className="h-8 w-8 text-gold" />
             </div>
@@ -236,57 +203,66 @@ const AdminReservas = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredReservas.map((reserva) => (
-                <TableRow key={reserva.id} className="border-gray-700">
-                  <TableCell>
-                    <div>
-                      <p className="text-white font-medium">{reserva.nome}</p>
-                      <p className="text-sm text-gray-400">{reserva.email}</p>
-                      <p className="text-sm text-gray-400">{reserva.telefone}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="text-white">{reserva.data}</p>
-                      <p className="text-sm text-gray-400">{reserva.hora}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-white">{reserva.mesa}</TableCell>
-                  <TableCell className="text-white">{reserva.pessoas}</TableCell>
-                  <TableCell>{getStatusBadge(reserva.status)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      {reserva.status === 'pendente' && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-green-400 border-green-400 hover:bg-green-400 hover:text-white"
-                            onClick={() => handleStatusChange(reserva.id, 'confirmada')}
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-400 border-red-400 hover:bg-red-400 hover:text-white"
-                            onClick={() => handleStatusChange(reserva.id, 'cancelada')}
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-gray-600 text-gray-300 hover:bg-gray-600"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                    </div>
+              {filteredReservas.length === 0 ? (
+                <TableRow className="border-gray-700">
+                  <TableCell colSpan={6} className="text-center text-gray-400 py-8">
+                    Nenhuma reserva encontrada
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filteredReservas.map((reserva) => (
+                  <TableRow key={reserva.id} className="border-gray-700">
+                    <TableCell>
+                      <div>
+                        <p className="text-white font-medium">{reserva.nome}</p>
+                        <p className="text-sm text-gray-400">{reserva.email}</p>
+                        <p className="text-sm text-gray-400">{reserva.telefone}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="text-white">{reserva.data}</p>
+                        <p className="text-sm text-gray-400">{reserva.hora}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-white">{getTableTypeName(reserva.tipoMesa)}</TableCell>
+                    <TableCell className="text-white">{reserva.pessoas}</TableCell>
+                    <TableCell>{getStatusBadge(reserva.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {reserva.status === 'pendente' && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-400 border-green-400 hover:bg-green-400 hover:text-white"
+                              onClick={() => handleStatusChange(reserva.id, 'confirmada')}
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-400 border-red-400 hover:bg-red-400 hover:text-white"
+                              onClick={() => handleStatusChange(reserva.id, 'cancelada')}
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                          </>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                          title="Ver detalhes"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

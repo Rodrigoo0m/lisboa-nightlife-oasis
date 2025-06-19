@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,9 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar, Users, Star, Clock, Phone, Mail, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useReservations } from '@/contexts/ReservationContext';
 
 const ReservationSection = () => {
   const { toast } = useToast();
+  const { addReservation } = useReservations();
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
@@ -24,6 +25,29 @@ const ReservationSection = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    if (!formData.nome || !formData.email || !formData.telefone || !formData.data || !formData.hora || !formData.pessoas || !formData.tipoMesa) {
+      toast({
+        title: "Erro na Reserva",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Add reservation
+    addReservation({
+      nome: formData.nome,
+      email: formData.email,
+      telefone: formData.telefone,
+      data: formData.data,
+      hora: formData.hora,
+      pessoas: parseInt(formData.pessoas),
+      tipoMesa: formData.tipoMesa,
+      observacoes: formData.observacoes
+    });
+
     console.log('Reservation submitted:', formData);
     
     toast({
